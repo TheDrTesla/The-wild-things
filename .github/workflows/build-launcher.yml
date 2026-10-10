@@ -1,0 +1,75 @@
+name: Build launcher
+
+# Push a tag like "launcher-v1.0.1" to build and publish a new launcher.
+# (Game builds are published here automatically from the private repo as "game-v..." releases.)
+
+on:
+  push:
+    tags: ["launcher-v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Launcher version (e.g. 1.0.1)"
+        required: true
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out version
+        id: ver
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then V="${{ github.event.inputs.version }}"; else V="${GITHUB_REF_NAME#launcher-v}"; fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "tag=launcher-v$V" >> "$GITHUB_OUTPUT"
+          sed -i "s/^config\/version=.*/config\/version=\"$V\"/" launcher/project.godot
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-win-template
+
+      - name: Install Godot + Windows export template
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$dest"
+          unzip -j -q /tmp/templates.tpz templates/windows_release_x86_64.exe templates/version.txt -d "$dest"
+          rm /tmp/templates.tpz
+
+      - name: Export launcher
+        working-directory: launcher
+        run: |
+          ~/godot/godot --headless --path . --import
+          mkdir -p build
+          ~/godot/godot --headless --path . --export-release "Windows Desktop" build/CtrlAltSalvageLauncher.exe
+          cd build && sha256sum CtrlAltSalvageLauncher.exe > CtrlAltSalvageLauncher.exe.sha256
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.ver.outputs.tag }}" \
+            launcher/build/CtrlAltSalvageLauncher.exe launcher/build/CtrlAltSalvageLauncher.exe.sha256 \
+            --title "Launcher ${{ steps.ver.outputs.version }}" \
+            --notes "Download **CtrlAltSalvageLauncher.exe** and run it. It installs the game and keeps it up to date automatically." \
+            --target "${{ github.sha }}" \
+            --latest

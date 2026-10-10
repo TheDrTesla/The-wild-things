@@ -1,0 +1,27 @@
+; Ctrl+Alt+Salvage Launcher — Godot 4.7
+
+config_version=5
+
+[application]
+
+config/name="Ctrl+Alt+Salvage Launcher"
+config/version="1.0.0"
+run/main_scene="res://launcher.tscn"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="CtrlAltSalvageLauncher"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.0784, 0.0706, 0.0588, 1)
+boot_splash/show_image=false
+
+[display]
+
+window/size/viewport_width=960
+window/size/viewport_height=560
+window/size/resizable=false
+window/stretch/mode="canvas_items"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.0784, 0.0706, 0.0588, 1)

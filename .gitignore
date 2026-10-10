@@ -1,0 +1,4 @@
+launcher/.godot/
+launcher/build/
+*.import
+*.pem
