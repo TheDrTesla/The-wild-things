@@ -167,13 +167,23 @@ func _fallback(local_ok: bool, why: String) -> Dictionary:
 		return {"ok": true, "message": why + " Playing installed version %s." % installed_version()}
 	return {"ok": false, "message": why}
 
+## The release with the highest version after `prefix`, skipping drafts and pre-releases.
+## GitHub's list order can't be trusted: releases sharing a date come in text order,
+## which puts "0.4.9" before "0.4.10".
 func _newest(releases: Array, prefix: String) -> Dictionary:
-	# GitHub lists newest first; skip drafts and pre-releases
+	var best := {}
+	var best_ver := ""
 	for r in releases:
-		if typeof(r) == TYPE_DICTIONARY and str(r.get("tag_name", "")).begins_with(prefix) \
-				and not r.get("draft", false) and not r.get("prerelease", false):
-			return r
-	return {}
+		if typeof(r) != TYPE_DICTIONARY or r.get("draft", false) or r.get("prerelease", false):
+			continue
+		var tag := str(r.get("tag_name", ""))
+		if not tag.begins_with(prefix):
+			continue
+		var ver := tag.substr(prefix.length())
+		if best.is_empty() or _version_greater(ver, best_ver):
+			best = r
+			best_ver = ver
+	return best
 
 func _check_launcher(releases: Array) -> void:
 	launcher_update = {}
