@@ -38,9 +38,9 @@ jobs:
           path: |
             ~/godot
             ~/.local/share/godot/export_templates
-          key: godot-${{ env.GODOT_VERSION }}-win-template
+          key: godot-${{ env.GODOT_VERSION }}-win-linux-template
 
-      - name: Install Godot + Windows export template
+      - name: Install Godot + Windows and Linux export templates
         if: steps.cache-godot.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
@@ -52,7 +52,7 @@ jobs:
           curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
           dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$dest"
-          unzip -j -q /tmp/templates.tpz templates/windows_release_x86_64.exe templates/version.txt -d "$dest"
+          unzip -j -q /tmp/templates.tpz templates/windows_release_x86_64.exe templates/linux_release.x86_64 templates/version.txt -d "$dest"
           rm /tmp/templates.tpz
 
       - name: Export launcher
@@ -61,7 +61,13 @@ jobs:
           ~/godot/godot --headless --path . --import
           mkdir -p build
           ~/godot/godot --headless --path . --export-release "Windows Desktop" build/CtrlAltSalvageLauncher.exe
-          cd build && sha256sum CtrlAltSalvageLauncher.exe > CtrlAltSalvageLauncher.exe.sha256
+          ~/godot/godot --headless --path . --export-release "Linux" build/CtrlAltSalvageLauncher.x86_64
+          cd build
+          # A tarball keeps the executable bit, which a bare download would lose
+          chmod +x CtrlAltSalvageLauncher.x86_64
+          tar -czf CtrlAltSalvageLauncher-linux.tar.gz CtrlAltSalvageLauncher.x86_64
+          sha256sum CtrlAltSalvageLauncher.exe > CtrlAltSalvageLauncher.exe.sha256
+          sha256sum CtrlAltSalvageLauncher-linux.tar.gz > CtrlAltSalvageLauncher-linux.tar.gz.sha256
 
       - name: Publish release
         env:
@@ -69,7 +75,8 @@ jobs:
         run: |
           gh release create "${{ steps.ver.outputs.tag }}" \
             launcher/build/CtrlAltSalvageLauncher.exe launcher/build/CtrlAltSalvageLauncher.exe.sha256 \
+            launcher/build/CtrlAltSalvageLauncher-linux.tar.gz launcher/build/CtrlAltSalvageLauncher-linux.tar.gz.sha256 \
             --title "Launcher ${{ steps.ver.outputs.version }}" \
-            --notes "Download **CtrlAltSalvageLauncher.exe** and run it. It installs the game and keeps it up to date automatically." \
+            --notes "Windows: download **CtrlAltSalvageLauncher.exe** and run it. Linux: download **CtrlAltSalvageLauncher-linux.tar.gz**, extract it and run **CtrlAltSalvageLauncher.x86_64**. It installs the game and keeps it up to date automatically." \
             --target "${{ github.sha }}" \
             --latest

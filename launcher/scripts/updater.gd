@@ -16,8 +16,11 @@ signal progress(fraction: float)   # 0..1, or -1 when unknown
 const REPO := "TheDrTesla/The-wild-things"
 const GAME_TAG_PREFIX := "game-v"
 const LAUNCHER_TAG_PREFIX := "launcher-v"
-const MANIFEST_NAME := "manifest.json"
-const SIGNATURE_NAME := "manifest.json.sig"
+# Each game release carries one signed manifest per platform. Windows keeps the
+# original name so launchers already out there keep working.
+var platform := "linux" if OS.get_name() == "Linux" else "windows"
+var manifest_name := "manifest-linux.json" if platform == "linux" else "manifest.json"
+var signature_name := manifest_name + ".sig"
 
 const INSTALL_DIR := "user://game"
 const STAGING_DIR := "user://game_staging"
@@ -101,8 +104,8 @@ func check_and_update(force_reinstall := false) -> Dictionary:
 	release_notes = str(game_rel.get("body", ""))
 
 	# 1. Download and verify the signed manifest
-	var manifest_asset := _asset(game_rel, MANIFEST_NAME)
-	var sig_asset := _asset(game_rel, SIGNATURE_NAME)
+	var manifest_asset := _asset(game_rel, manifest_name)
+	var sig_asset := _asset(game_rel, signature_name)
 	if manifest_asset.is_empty() or sig_asset.is_empty():
 		return _fallback(local_ok, "Latest release is missing its signature files.")
 	var m_res := await _fetch(manifest_asset["browser_download_url"])
@@ -140,6 +143,12 @@ func check_and_update(force_reinstall := false) -> Dictionary:
 	if err != "":
 		_remove_dir(STAGING_DIR)
 		return _fallback(local_ok, err)
+	if platform == "linux":
+		# Zip extraction doesn't keep the executable bit
+		FileAccess.set_unix_permissions(ProjectSettings.globalize_path(STAGING_DIR + "/" + str(manifest["exe"])),
+			FileAccess.UNIX_READ_OWNER | FileAccess.UNIX_WRITE_OWNER | FileAccess.UNIX_EXECUTE_OWNER \
+			| FileAccess.UNIX_READ_GROUP | FileAccess.UNIX_EXECUTE_GROUP \
+			| FileAccess.UNIX_READ_OTHER | FileAccess.UNIX_EXECUTE_OTHER)
 	_remove_dir(INSTALL_DIR)
 	if DirAccess.rename_absolute(ProjectSettings.globalize_path(STAGING_DIR), ProjectSettings.globalize_path(INSTALL_DIR)) != OK:
 		return {"ok": false, "message": "Could not move the game into place. Is the game still running?"}
@@ -209,6 +218,8 @@ func _manifest_valid(m, release: Dictionary) -> bool:
 			return false
 	if str(m["tag"]) != str(release.get("tag_name", "")):
 		return false  # manifest must belong to this exact release
+	if str(m.get("platform", "windows")) != platform:
+		return false  # older manifests have no platform and are Windows builds
 	if typeof(m["files"]) != TYPE_DICTIONARY or not m["files"].has(m["exe"]):
 		return false
 	for path in m["files"]:

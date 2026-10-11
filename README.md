@@ -4,6 +4,8 @@
 
 ## Download
 
+### Windows
+
 **[Download the launcher (Windows)](https://github.com/TheDrTesla/The-wild-things/releases/latest/download/CtrlAltSalvageLauncher.exe)**
 
 1. Run `CtrlAltSalvageLauncher.exe`.
@@ -11,6 +13,14 @@
 3. Press **PLAY**.
 
 > **Windows SmartScreen:** the launcher isn't code-signed yet, so Windows may say *"Windows protected your PC"*. Click **More info → Run anyway**.
+
+### Linux (x86_64)
+
+**[Download the launcher (Linux)](https://github.com/TheDrTesla/The-wild-things/releases/latest/download/CtrlAltSalvageLauncher-linux.tar.gz)**
+
+1. Extract it: `tar -xzf CtrlAltSalvageLauncher-linux.tar.gz`
+2. Run `./CtrlAltSalvageLauncher.x86_64` (or double-click it in your file manager).
+3. The launcher downloads the game the first time, and installs any update each time you start it. Press **PLAY**.
 
 ## How updates stay safe
 
@@ -23,7 +33,7 @@ Every game build is signed by the developer. Before installing anything, the lau
 
 If any check fails, the update is ignored and your current version keeps working. If your game files get damaged, the launcher notices and re-downloads them (or press **Repair**).
 
-Files live in `%APPDATA%\CtrlAltSalvageLauncher\game`. Your saves live separately in `%APPDATA%\CtrlAltSalvage` and are never touched by updates.
+Files live in `%APPDATA%\CtrlAltSalvageLauncher\game` (Linux: `~/.local/share/CtrlAltSalvageLauncher/game`). Your saves live separately in `%APPDATA%\CtrlAltSalvage` (Linux: `~/.local/share/CtrlAltSalvage`) and are never touched by updates.
 
 ---
 
@@ -34,6 +44,6 @@ This repo holds the launcher source (`launcher/`, a Godot 4.7 project) and hosts
 | Release tag | What it is | Published by |
 |---|---|---|
 | `launcher-v*` | The launcher players download | This repo's workflow, when you push a `launcher-v1.2.3` tag |
-| `game-v*` | Signed game builds | The private game repo's workflow, on every push to `main` |
+| `game-v*` | Signed game builds (Windows zip + `manifest.json`, Linux zip + `manifest-linux.json`, each manifest signed) | The private game repo's workflow, on every push to `main` |
 
 The launcher contains no passwords or tokens, only the public key in `launcher/scripts/updater.gd`.
